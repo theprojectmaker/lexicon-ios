@@ -1,4 +1,4 @@
-import { dictionary, encyclopedia, DictionaryEntry, EncyclopediaEntry } from './data';
+import { getDictionary, getEncyclopedia, DictionaryEntry, EncyclopediaEntry } from './data';
 
 // Both source arrays are pre-sorted by `key`, so a prefix search is a
 // binary search for the lower bound followed by a linear scan forward
@@ -19,6 +19,7 @@ function lowerBound<T extends { key: string }>(arr: T[], prefix: string): number
 export function searchDictionary(query: string, limit = 40): DictionaryEntry[] {
   const q = query.trim().toLowerCase();
   if (!q) return [];
+  const dictionary = getDictionary();
   const start = lowerBound(dictionary, q);
   const out: DictionaryEntry[] = [];
   for (let i = start; i < dictionary.length && out.length < limit; i++) {
@@ -31,6 +32,7 @@ export function searchDictionary(query: string, limit = 40): DictionaryEntry[] {
 export function searchEncyclopedia(query: string, limit = 25): EncyclopediaEntry[] {
   const q = query.trim().toLowerCase();
   if (!q) return [];
+  const encyclopedia = getEncyclopedia();
   const start = lowerBound(encyclopedia, q);
   const prefixMatches: EncyclopediaEntry[] = [];
   for (let i = start; i < encyclopedia.length && prefixMatches.length < limit; i++) {
@@ -53,6 +55,7 @@ export function searchEncyclopedia(query: string, limit = 25): EncyclopediaEntry
 
 export function exactDictionaryMatch(query: string): DictionaryEntry | undefined {
   const q = query.trim().toLowerCase();
+  const dictionary = getDictionary();
   const start = lowerBound(dictionary, q);
   const entry = dictionary[start];
   return entry && entry.key === q ? entry : undefined;

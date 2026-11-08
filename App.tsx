@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   Linking,
   Platform,
   Pressable,
@@ -14,7 +15,7 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import { theme } from './src/theme';
 import { searchDictionary, searchEncyclopedia } from './src/search';
-import { dictionary, encyclopedia } from './src/data';
+import { loadData, getDictionary, getEncyclopedia } from './src/data';
 import type { DictionaryEntry, EncyclopediaEntry } from './src/data';
 
 type Screen = { kind: 'search' } | { kind: 'about' };
@@ -24,12 +25,34 @@ type Detail =
   | null;
 
 export default function App() {
+  const [ready, setReady] = useState(false);
   const [screen, setScreen] = useState<Screen>({ kind: 'search' });
   const [query, setQuery] = useState('');
   const [detail, setDetail] = useState<Detail>(null);
 
-  const wordResults = useMemo(() => searchDictionary(query), [query]);
-  const topicResults = useMemo(() => searchEncyclopedia(query), [query]);
+  useEffect(() => {
+    // Deferred so the splash below gets one real frame on screen first —
+    // see the comment in src/data/index.ts for why this matters.
+    loadData().then(() => setReady(true));
+  }, []);
+
+  const wordResults = useMemo(() => (ready ? searchDictionary(query) : []), [ready, query]);
+  const topicResults = useMemo(() => (ready ? searchEncyclopedia(query) : []), [ready, query]);
+
+  if (!ready) {
+    return (
+      <SafeAreaProvider>
+        <SafeAreaView style={[styles.safe, styles.center]}>
+          <ExpoStatusBar style="dark" />
+          <ActivityIndicator color={theme.accentEncy} />
+          <Text style={[styles.emptyText, { marginTop: 14 }]}>Loading Lexicon…</Text>
+        </SafeAreaView>
+      </SafeAreaProvider>
+    );
+  }
+
+  const dictionaryCount = getDictionary().length;
+  const encyclopediaCount = getEncyclopedia().length;
 
   return (
     <SafeAreaProvider>
@@ -46,7 +69,7 @@ export default function App() {
         </View>
 
         {screen.kind === 'about' ? (
-          <AboutScreen />
+          <AboutScreen dictionaryCount={dictionaryCount} encyclopediaCount={encyclopediaCount} />
         ) : detail ? (
           <DetailScreen detail={detail} onBack={() => setDetail(null)} />
         ) : (
@@ -65,13 +88,13 @@ export default function App() {
             </View>
 
             {query.trim().length === 0 ? (
-              <EmptyState />
+              <EmptyState dictionaryCount={dictionaryCount} encyclopediaCount={encyclopediaCount} />
             ) : wordResults.length === 0 && topicResults.length === 0 ? (
               <View style={styles.center}>
                 <Text style={styles.emptyText}>No matches for “{query.trim()}”.</Text>
                 <Text style={styles.emptySub}>
-                  This is a fixed offline reference — about {dictionary.length.toLocaleString()} dictionary
-                  words and {encyclopedia.length.toLocaleString()} encyclopedia topics. Not everything is
+                  This is a fixed offline reference — about {dictionaryCount.toLocaleString()} dictionary
+                  words and {encyclopediaCount.toLocaleString()} encyclopedia topics. Not everything is
                   covered.
                 </Text>
               </View>
@@ -160,20 +183,32 @@ function DetailScreen({ detail, onBack }: { detail: NonNullable<Detail>; onBack:
   );
 }
 
-function EmptyState() {
+function EmptyState({
+  dictionaryCount,
+  encyclopediaCount,
+}: {
+  dictionaryCount: number;
+  encyclopediaCount: number;
+}) {
   return (
     <View style={styles.center}>
       <Text style={styles.emptyBig}>📖</Text>
       <Text style={styles.emptyText}>Search a word or a topic.</Text>
       <Text style={styles.emptySub}>
-        Works fully offline — {dictionary.length.toLocaleString()} dictionary words and{' '}
-        {encyclopedia.length.toLocaleString()} encyclopedia topics, no internet needed.
+        Works fully offline — {dictionaryCount.toLocaleString()} dictionary words and{' '}
+        {encyclopediaCount.toLocaleString()} encyclopedia topics, no internet needed.
       </Text>
     </View>
   );
 }
 
-function AboutScreen() {
+function AboutScreen({
+  dictionaryCount,
+  encyclopediaCount,
+}: {
+  dictionaryCount: number;
+  encyclopediaCount: number;
+}) {
   const open = (url: string) => Linking.openURL(url);
   return (
     <ScrollView contentContainerStyle={styles.about}>
@@ -185,7 +220,7 @@ function AboutScreen() {
 
       <Text style={styles.aboutSubheading}>Dictionary</Text>
       <Text style={styles.aboutPara}>
-        {dictionary.length.toLocaleString()} word definitions from{' '}
+        {dictionaryCount.toLocaleString()} word definitions from{' '}
         <Text style={styles.bold}>Webster's Revised Unabridged Dictionary (1913)</Text>, via Project
         Gutenberg. This text is in the public domain. Because it's over a century old, spelling,
         phrasing, and some scientific terms are dated — and a few modern words simply aren't in it.
@@ -193,7 +228,7 @@ function AboutScreen() {
 
       <Text style={styles.aboutSubheading}>Encyclopedia</Text>
       <Text style={styles.aboutPara}>
-        {encyclopedia.length.toLocaleString()} topic summaries adapted from{' '}
+        {encyclopediaCount.toLocaleString()} topic summaries adapted from{' '}
         <Text style={styles.bold}>Simple English Wikipedia</Text>, licensed under{' '}
         <Text style={styles.link} onPress={() => open('https://creativecommons.org/licenses/by-sa/4.0/')}>
           CC BY-SA 4.0
