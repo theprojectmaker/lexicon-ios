@@ -1,0 +1,10 @@
+node_modules/
+.expo/
+dist/
+build/
+*.log
+.DS_Store
+pipeline/data/*.txt
+pipeline/data/webster-raw.json
+pipeline/data/encyclopedia-raw.json
+pipeline/data/topics.json

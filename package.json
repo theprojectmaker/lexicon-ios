@@ -1,0 +1,26 @@
+{
+  "name": "lexicon",
+  "main": "index.ts",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "expo start",
+    "web": "expo start --web",
+    "typecheck": "tsc --noEmit",
+    "build-data": "node pipeline/01-fetch-topics.mjs && node pipeline/02-fetch-extracts.mjs && node pipeline/03-process-dictionary.mjs && node pipeline/04-process-encyclopedia.mjs",
+    "check-sdk": "node scripts/check-sdk.cjs"
+  },
+  "dependencies": {
+    "expo": "~57.0.30",
+    "expo-status-bar": "~57.0.1",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-native": "0.86.3",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-web": "~0.21.0"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.2",
+    "typescript": "~6.0.3"
+  }
+}

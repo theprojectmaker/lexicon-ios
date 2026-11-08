@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "Lexicon",
+    "slug": "lexicon",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "lexicon",
+    "userInterfaceStyle": "automatic",
+    "backgroundColor": "#FAF7F0",
+    "icon": "./assets/icon.png",
+    "ios": {
+      "bundleIdentifier": "com.solyapps.lexicon",
+      "supportsTablet": true,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "CFBundleDisplayName": "Lexicon"
+      }
+    },
+    "android": {
+      "package": "com.solyapps.lexicon",
+      "permissions": []
+    },
+    "web": {
+      "output": "single",
+      "backgroundColor": "#FAF7F0"
+    },
+    "splash": {
+      "backgroundColor": "#FAF7F0",
+      "image": "./assets/icon.png",
+      "resizeMode": "contain"
+    },
+    "owner": "solomonsasson",
+    "extra": {
+      "eas": {
+        "projectId": "b8dc87fd-e401-4880-800c-16d8c68a8f34"
+      }
+    }
+  }
+}
