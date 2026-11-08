@@ -4,11 +4,23 @@
 // The "extracts" API prop only reliably returns text for ONE title per
 // request when batched, so this fetches one at a time with light
 // concurrency and a polite delay/User-Agent.
-import { readFileSync, writeFileSync } from "fs";
+import { readFileSync, writeFileSync, existsSync } from "fs";
 
 const topics = JSON.parse(
   readFileSync(new URL("./data/topics.json", import.meta.url), "utf8")
 );
+
+// Checkpoint as we go (one long run previously got killed near the end
+// with nothing saved) — resume by skipping titles already done.
+const CHECKPOINT_URL = new URL("./data/encyclopedia-raw.json", import.meta.url);
+const done = new Map();
+if (existsSync(CHECKPOINT_URL)) {
+  for (const r of JSON.parse(readFileSync(CHECKPOINT_URL, "utf8"))) {
+    done.set(r.title, r);
+  }
+  console.log(`resuming: ${done.size} topics already fetched`);
+}
+const remaining = topics.filter((t) => !done.has(t));
 
 const UA =
   "LexiconOfflineSchoolApp/1.0 (solomonsasson031@gmail.com; one-time offline data build)";
@@ -39,33 +51,37 @@ async function fetchExtract(title) {
 }
 
 const CONCURRENCY = 6;
-const results = [];
+const newResults = [];
 let cursor = 0;
-let done = 0;
+let doneCount = 0;
+
+function checkpoint() {
+  const all = [...done.values(), ...newResults];
+  all.sort((a, b) => a.title.localeCompare(b.title));
+  writeFileSync(CHECKPOINT_URL, JSON.stringify(all, null, 1));
+  return all.length;
+}
 
 async function worker() {
-  while (cursor < topics.length) {
+  while (cursor < remaining.length) {
     const i = cursor++;
-    const title = topics[i];
+    const title = remaining[i];
     try {
       const r = await fetchExtract(title);
-      if (r) results.push(r);
+      if (r) newResults.push(r);
     } catch (e) {
       console.error("failed:", title, e.message);
     }
-    done++;
-    if (done % 50 === 0) console.log(`${done}/${topics.length}`);
+    doneCount++;
+    if (doneCount % 100 === 0) {
+      console.log(`${doneCount}/${remaining.length} (checkpointing...)`);
+      checkpoint();
+    }
     await new Promise((r) => setTimeout(r, 30));
   }
 }
 
 await Promise.all(Array.from({ length: CONCURRENCY }, worker));
 
-results.sort((a, b) => a.title.localeCompare(b.title));
-console.log(
-  `got ${results.length} usable extracts out of ${topics.length} topics`
-);
-writeFileSync(
-  new URL("./data/encyclopedia-raw.json", import.meta.url),
-  JSON.stringify(results, null, 1)
-);
+const total = checkpoint();
+console.log(`done: ${total} usable extracts saved to encyclopedia-raw.json`);
